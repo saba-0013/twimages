@@ -1,3 +1,16 @@
+##### user added #####
+# secrets
+.secrets
+.envrc
+
+# files
+*.csv
+*.png
+
+# venv
+.twimages
+
+######################
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
