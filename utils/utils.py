@@ -1,46 +1,35 @@
-import io
-import json
 from urllib.parse import urlparse
 
 import boto3
-import requests
 
-from base import Settings
+from utils import logs
+
+logger = logs.get_logger("mashiro")
 
 s3_client = boto3.client('s3')
 
-def get_metadata_from_url(url):
+def extract_twi_status_from_url(url):
     parsed_path = urlparse(url).path.split("/")
-    user_id = parsed_path[1]
     status_code = parsed_path[-1]
 
-    # return {"user_id": user_id, "status_code": status_code}
-    return user_id, status_code
+    return status_code
 
+def is_url(message) -> bool:
+    o = urlparse(message)
+    return True if o.scheme and o.netloc else False
 
-def get_resources_from_status_code(twi_status):
-    url_ = f"https://api.vxtwitter.com/Twitter/status/{twi_status}"
-    r = requests.get(url_)
-    if r.status_code != 200:
-        print(r.status_code)
-        return None
-    else:
-        response_ = json.loads(r.text)
-        media_urls = response_.get("mediaURLs", None)
-        twi_text = response_.get("text", None)
-        twi_date = response_.get("date", None)
-
-    return {"media_urls": media_urls,"twi_text": twi_text, "twi_date": twi_date}
-
-def upload_image_to_s3(image_url, file_name):
-    res = requests.get(image_url)
-    print(res.status_code)
-    img_content = io.BytesIO(res.content)
-    s3_client.upload_fileobj(img_content, Settings.BUCKET_NAME, file_name)
-
-    return None
-
-def upload_metadata_to_s3(metadata, upload_to):
-
-    
-    return None
+def check_file_exists(bucket_name, s3_file_path):
+    try:
+        r = s3_client.head_object(Bucket=bucket_name, Key=s3_file_path)
+        if r["ResponseMetadata"]["HTTPStatusCode"] != 200:
+            logger.info(f"code: {r['ResponseMetadata']['HTTPStatusCode']} upload faild. path: {s3_file_path}")
+            return False
+        elif r["ContentLength"] == 0:
+            logger.info(f"upload faild. path: {s3_file_path}")
+            return False
+        else:
+            logger.info(r["ContentLength"])
+            return True
+    except Exception as e:
+        logger.error(e)
+        return False
